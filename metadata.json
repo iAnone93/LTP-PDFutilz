@@ -1,0 +1,5 @@
+{
+  "name": "PDF Table Placer",
+  "description": "A tool to visually place and insert tables into existing PDF documents directly in your browser.",
+  "requestFramePermissions": []
+}
