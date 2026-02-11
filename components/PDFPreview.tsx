@@ -1,8 +1,10 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { getPDFDocument } from '../utils/pdfUtils';
-import { Placement, TableData } from '../types';
+import { Placement, TableData, SignatureData } from '../types';
 import { MousePointerClick, ZoomIn, ZoomOut } from 'lucide-react';
 import TableOverlay from './TableOverlay';
+import SignatureOverlay from './SignatureOverlay';
 
 interface PDFPreviewProps {
   fileData: ArrayBuffer | null;
@@ -11,6 +13,10 @@ interface PDFPreviewProps {
   tableData: TableData;
   onTableDataChange: (data: TableData) => void;
   onDeleteTable: () => void;
+  signatures: SignatureData[];
+  onSignatureUpdate: (sig: SignatureData) => void;
+  onSignatureRemove: (id: string) => void;
+  onActivePageChange?: (index: number) => void;
 }
 
 const PDFPreview: React.FC<PDFPreviewProps> = ({ 
@@ -19,13 +25,29 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({
   selectedPlacement,
   tableData,
   onTableDataChange,
-  onDeleteTable
+  onDeleteTable,
+  signatures,
+  onSignatureUpdate,
+  onSignatureRemove,
+  onActivePageChange
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [numPages, setNumPages] = useState<number>(0);
   const [pdfDoc, setPdfDoc] = useState<any>(null);
   const [scale, setScale] = useState(1.0);
   const [rendering, setRendering] = useState(false);
+
+  // --- Drag & Drop State for Signatures ---
+  const [dragState, setDragState] = useState<{
+    sigId: string;
+    offsetX: number; 
+    offsetY: number;
+    width: number;
+    height: number;
+    dataUrl: string;
+    clientX: number;
+    clientY: number;
+  } | null>(null);
 
   useEffect(() => {
     const loadPdf = async () => {
@@ -44,22 +66,125 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({
     loadPdf();
   }, [fileData]);
 
-  // Handle Canvas Click
+  // --- Active Page Detection ---
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !onActivePageChange) return;
+
+    const handleScroll = () => {
+      // Find the page mostly in view. Simple heuristic: page closest to center.
+      const pages = container.querySelectorAll('[data-page-index]');
+      const containerRect = container.getBoundingClientRect();
+      const centerY = containerRect.top + containerRect.height / 2;
+
+      let closestPage = 0;
+      let minDistance = Infinity;
+
+      pages.forEach((page) => {
+        const rect = page.getBoundingClientRect();
+        const pageCenterY = rect.top + rect.height / 2;
+        const distance = Math.abs(centerY - pageCenterY);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestPage = parseInt(page.getAttribute('data-page-index') || '0', 10);
+        }
+      });
+      onActivePageChange(closestPage);
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [onActivePageChange, numPages]);
+
+  // --- Global Drag Logic ---
+  const handleSigDragStart = (e: React.MouseEvent, sig: SignatureData) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Calculate offset from the top-left of the signature element
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+
+    setDragState({
+      sigId: sig.id,
+      offsetX,
+      offsetY,
+      width: sig.width,
+      height: sig.height,
+      dataUrl: sig.dataUrl,
+      clientX: e.clientX,
+      clientY: e.clientY
+    });
+  };
+
+  useEffect(() => {
+    const handleMove = (e: MouseEvent) => {
+      if (!dragState) return;
+      setDragState(prev => prev ? ({ ...prev, clientX: e.clientX, clientY: e.clientY }) : null);
+    };
+
+    const handleUp = (e: MouseEvent) => {
+      if (!dragState) return;
+
+      // Drop Logic
+      // 1. Determine which page element is under the cursor/center of item
+      const elements = document.elementsFromPoint(e.clientX, e.clientY);
+      const pageEl = elements.find(el => el.hasAttribute('data-page-index'));
+
+      if (pageEl) {
+        const pageIndex = parseInt(pageEl.getAttribute('data-page-index') || '0', 10);
+        const rect = pageEl.getBoundingClientRect();
+        
+        // 2. Calculate coordinates relative to that page
+        const visX = (e.clientX - dragState.offsetX) - rect.left;
+        const visY = (e.clientY - dragState.offsetY) - rect.top;
+
+        // 3. Convert to PDF coordinates
+        // PDF X = visual X / scale
+        // PDF Y = (Page Height - Visual Bottom) / scale
+        // Visual Bottom = visY + (height * scale)
+        // PDF Y = (rect.height - (visY + dragState.height * scale)) / scale
+        //       = (rect.height - visY)/scale - dragState.height
+        
+        const pdfX = visX / scale;
+        const pdfY = (rect.height - visY) / scale - dragState.height;
+
+        const targetSig = signatures.find(s => s.id === dragState.sigId);
+        if (targetSig) {
+          onSignatureUpdate({
+             ...targetSig,
+             pageIndex,
+             x: pdfX,
+             y: pdfY
+          });
+        }
+      }
+
+      setDragState(null);
+    };
+
+    if (dragState) {
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleUp);
+    }
+    return () => {
+        window.removeEventListener('mousemove', handleMove);
+        window.removeEventListener('mouseup', handleUp);
+    }
+  }, [dragState, scale, signatures, onSignatureUpdate]);
+
+
+  // Handle Canvas Click (Table Placement)
   const handleCanvasClick = (
     e: React.MouseEvent<HTMLDivElement>, 
     pageIndex: number, 
     viewport: any
   ) => {
-    // If clicking inside inputs (which stop propagation), don't move the table
     if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).closest('button')) {
       return;
     }
-
-    // If table is already placed, prevent moving it by clicking elsewhere on the canvas.
-    if (selectedPlacement) {
-      return;
-    }
-
+    if (selectedPlacement) return;
     if (!containerRef.current) return;
     
     const rect = (e.target as HTMLElement).getBoundingClientRect();
@@ -79,7 +204,23 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-100 rounded-xl overflow-hidden shadow-inner border border-gray-200">
+    <div className="flex flex-col h-full bg-gray-100 rounded-xl overflow-hidden shadow-inner border border-gray-200 relative">
+      {/* Dragging Overlay (Global) */}
+      {dragState && (
+        <div 
+          className="fixed z-50 pointer-events-none opacity-80"
+          style={{
+            left: dragState.clientX - dragState.offsetX,
+            top: dragState.clientY - dragState.offsetY,
+            width: dragState.width * scale,
+            height: dragState.height * scale,
+          }}
+        >
+          <img src={dragState.dataUrl} className="w-full h-full object-contain" alt="Dragging Signature" />
+          <div className="absolute inset-0 border border-indigo-500 border-dashed"></div>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="bg-white p-2 border-b border-gray-200 flex items-center justify-between sticky top-0 z-10 shadow-sm">
         <div className="text-xs font-semibold text-gray-500 uppercase px-2">PDF Preview</div>
@@ -129,6 +270,11 @@ const PDFPreview: React.FC<PDFPreviewProps> = ({
             onTableDataChange={onTableDataChange}
             onDeleteTable={onDeleteTable}
             onPlacementUpdate={onPlacementSelect}
+            signatures={signatures.filter(s => s.pageIndex === i)}
+            onSignatureUpdate={onSignatureUpdate}
+            onSignatureRemove={onSignatureRemove}
+            onSignatureDragStart={handleSigDragStart}
+            isDraggingAny={!!dragState}
           />
         ))}
       </div>
@@ -146,6 +292,11 @@ interface PDFPageProps {
   onTableDataChange: (data: TableData) => void;
   onDeleteTable: () => void;
   onPlacementUpdate: (placement: Placement) => void;
+  signatures: SignatureData[];
+  onSignatureUpdate: (sig: SignatureData) => void;
+  onSignatureRemove: (id: string) => void;
+  onSignatureDragStart: (e: React.MouseEvent, sig: SignatureData) => void;
+  isDraggingAny: boolean;
 }
 
 const PDFPage: React.FC<PDFPageProps> = ({ 
@@ -157,15 +308,20 @@ const PDFPage: React.FC<PDFPageProps> = ({
   tableData,
   onTableDataChange,
   onDeleteTable,
-  onPlacementUpdate
+  onPlacementUpdate,
+  signatures,
+  onSignatureUpdate,
+  onSignatureRemove,
+  onSignatureDragStart,
+  isDraggingAny
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [viewport, setViewport] = useState<any>(null);
   const renderTaskRef = useRef<any>(null);
   
-  // Drag State
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  // Drag State (for table)
+  const [isDraggingTable, setIsDraggingTable] = useState(false);
+  const [dragStartTable, setDragStartTable] = useState<{ x: number; y: number } | null>(null);
   const [initialPlacement, setInitialPlacement] = useState<{ x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -174,13 +330,10 @@ const PDFPage: React.FC<PDFPageProps> = ({
     const renderPage = async () => {
       if (!canvasRef.current || !pdfDoc) return;
 
-      // Cancel previous render task if it exists to avoid "canvas in use" errors
       if (renderTaskRef.current) {
-        try {
-          await renderTaskRef.current.cancel();
-        } catch (error) {
-          // Ignore cancellation errors
-        }
+        // Cancel previous render task if it exists
+        // Note: cancel() returns void in newer pdf.js, so we don't await or catch it.
+        renderTaskRef.current.cancel(); 
       }
 
       try {
@@ -222,37 +375,32 @@ const PDFPage: React.FC<PDFPageProps> = ({
     return () => {
       isMounted = false;
       if (renderTaskRef.current) {
-        renderTaskRef.current.cancel().catch(() => {});
+        // Cancel pending render on cleanup
+        renderTaskRef.current.cancel();
       }
     };
   }, [pdfDoc, pageIndex, scale]);
 
-  // Handle Dragging
+  // Handle Dragging Table
   const handleDragStart = (e: React.MouseEvent) => {
     e.stopPropagation(); 
     e.preventDefault();
     if (!selectedPlacement) return;
 
-    setIsDragging(true);
-    setDragStart({ x: e.clientX, y: e.clientY });
+    setIsDraggingTable(true);
+    setDragStartTable({ x: e.clientX, y: e.clientY });
     setInitialPlacement({ x: selectedPlacement.x, y: selectedPlacement.y });
   };
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging || !dragStart || !initialPlacement || !selectedPlacement) return;
+      if (!isDraggingTable || !dragStartTable || !initialPlacement || !selectedPlacement) return;
 
-      const deltaX = e.clientX - dragStart.x;
-      const deltaY = e.clientY - dragStart.y;
-
-      // Convert screen pixels to PDF units
+      const deltaX = e.clientX - dragStartTable.x;
+      const deltaY = e.clientY - dragStartTable.y;
       const deltaPdfX = deltaX / scale;
       const deltaPdfY = deltaY / scale;
 
-      // Update Placement
-      // Note: PDF coordinates: Y increases upwards. 
-      // Screen coordinates: Y increases downwards.
-      // Moving mouse down (positive deltaY) should DECREASE PDF Y.
       onPlacementUpdate({
         ...selectedPlacement,
         x: initialPlacement.x + deltaPdfX,
@@ -261,12 +409,12 @@ const PDFPage: React.FC<PDFPageProps> = ({
     };
 
     const handleMouseUp = () => {
-      setIsDragging(false);
-      setDragStart(null);
+      setIsDraggingTable(false);
+      setDragStartTable(null);
       setInitialPlacement(null);
     };
 
-    if (isDragging) {
+    if (isDraggingTable) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
     }
@@ -274,14 +422,37 @@ const PDFPage: React.FC<PDFPageProps> = ({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, dragStart, initialPlacement, scale, selectedPlacement, onPlacementUpdate]);
+  }, [isDraggingTable, dragStartTable, initialPlacement, scale, selectedPlacement, onPlacementUpdate]);
 
 
   return (
-    <div className="mb-8 flex justify-center relative group cursor-crosshair">
-      <div className="relative shadow-lg" onClick={(e) => viewport && !isDragging && onClick(e, viewport)}>
+    <div 
+      className="mb-8 flex justify-center relative group cursor-crosshair"
+    >
+      <div 
+        className="relative shadow-lg" 
+        onClick={(e) => viewport && !isDraggingTable && onClick(e, viewport)}
+        data-page-index={pageIndex} // Moved here to ensure bounding rect is the page itself, not the flex container
+      >
         <canvas ref={canvasRef} className="bg-white" />
         
+        {/* Signatures Container */}
+        {viewport && signatures.length > 0 && (
+           <div className="absolute inset-0 pointer-events-none">
+              {signatures.map(sig => (
+                  <SignatureOverlay 
+                      key={sig.id}
+                      signature={sig} 
+                      scale={scale} 
+                      onUpdate={onSignatureUpdate}
+                      onRemove={() => onSignatureRemove(sig.id)}
+                      onDragStart={(e) => onSignatureDragStart(e, sig)}
+                      isGlobalDragging={isDraggingAny}
+                  />
+              ))}
+           </div>
+        )}
+
         {/* Interactive Table Overlay */}
         {selectedPlacement && viewport && (
           <div 
@@ -290,7 +461,7 @@ const PDFPage: React.FC<PDFPageProps> = ({
               left: selectedPlacement.x * scale,
               top: viewport.height - (selectedPlacement.y * scale),
             }}
-            onClick={(e) => e.stopPropagation()} // Prevent repositioning when clicking the table itself
+            onClick={(e) => e.stopPropagation()} 
           >
              <TableOverlay 
                data={tableData} 

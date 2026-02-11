@@ -1,3 +1,4 @@
+
 export interface Merge {
   row: number; // 0-based index. 0 = Header, 1+ = Body Rows
   col: number; // 0-based index
@@ -20,6 +21,16 @@ export interface TableData {
   rowHeights: number[];   // Height of each row (Index 0 = Header, 1..n = Data Rows)
   merges: Merge[];
   styles?: Record<string, CellStyle>; // Key format: "row,col"
+}
+
+export interface SignatureData {
+  id: string;
+  dataUrl: string; // Base64 string of the PNG (processed or original)
+  x: number; // PDF coordinates
+  y: number; // PDF coordinates
+  width: number;
+  height: number;
+  pageIndex: number;
 }
 
 export interface Placement {
