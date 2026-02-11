@@ -1,11 +1,14 @@
 {
   "name": "pdf-table-placer",
+  "homepage": "https://ianone93.github.io/LTP-PDFutilz",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "lucide-react": "^0.363.0",

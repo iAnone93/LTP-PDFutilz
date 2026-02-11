@@ -5,5 +5,6 @@ export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
     exclude: ['pdfjs-dist'] // Prevents optimization issues with pdfjs worker
-  }
+  },
+  base: "/LTP-PDFutilz"
 });
