@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { TableData, CellStyle } from '../types';
 import { 
@@ -645,7 +646,8 @@ const TableOverlay: React.FC<TableOverlayProps> = ({
     } as React.CSSProperties;
   };
 
-  const borderClass = isTableActive ? 'border-gray-800' : 'border-transparent';
+  // Always show borders (matching PDF output) instead of hiding them when inactive
+  const borderClass = 'border-gray-800';
 
   // --- Prepare Rendering Lists ---
   const cellElements: React.ReactNode[] = [];
