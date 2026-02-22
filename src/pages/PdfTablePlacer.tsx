@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
-import { Upload, Download, FileText, Layout, CheckCircle, MousePointer2, Undo, Redo, PenTool, Menu, X } from 'lucide-react';
-import PDFPreview from './components/PDFPreview';
-import { readFileAsArrayBuffer, insertTableIntoPDF } from './utils/pdfUtils';
-import { TableData, Placement, ProcessingStatus, SignatureData } from './types';
-import ImageProcessorModal from './components/ImageProcessorModal';
+import { Link } from 'react-router-dom';
+import { Upload, Download, FileText, Layout, CheckCircle, MousePointer2, Undo, Redo, PenTool, Menu, X, ArrowLeft } from 'lucide-react';
+import PDFPreview from '../components/PdfTablePlacer/PDFPreview';
+import { readFileAsArrayBuffer, insertTableIntoPDF } from '../utils/pdfUtils';
+import { TableData, Placement, ProcessingStatus, SignatureData } from '../types';
+import ImageProcessorModal from '../components/PdfTablePlacer/ImageProcessorModal';
 
 // Initial Data with Dimensions
 const INITIAL_TABLE_DATA: TableData = {
@@ -18,7 +18,7 @@ const INITIAL_TABLE_DATA: TableData = {
   styles: {}
 };
 
-const App: React.FC = () => {
+const PdfTablePlacer: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [fileData, setFileData] = useState<ArrayBuffer | null>(null);
   const [placement, setPlacement] = useState<Placement | null>(null);
@@ -113,7 +113,7 @@ const App: React.FC = () => {
     setStatus('processing');
     try {
       const newPdfBytes = await insertTableIntoPDF(fileData, tableData, placement, signatures);
-      const blob = new Blob([newPdfBytes], { type: 'application/pdf' });
+      const blob = new Blob([newPdfBytes as any], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -178,6 +178,15 @@ const App: React.FC = () => {
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0 z-20 shadow-sm relative">
         <div className="flex items-center space-x-3">
+          {/* Back Button */}
+          <Link 
+            to="/" 
+            className="p-2 -ml-2 mr-1 text-gray-600 hover:bg-gray-100 rounded-md transition-colors flex items-center"
+            title="Back to Toolkit"
+          >
+            <ArrowLeft size={24} />
+          </Link>
+
           {/* Mobile Menu Toggle */}
           <button 
             className="lg:hidden p-2 -ml-2 mr-1 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
@@ -367,4 +376,4 @@ const App: React.FC = () => {
   );
 };
 
-export default App;
+export default PdfTablePlacer;

@@ -1,6 +1,6 @@
 
 import React, { useRef } from 'react';
-import { SignatureData } from '../types';
+import { SignatureData } from '../../types';
 import { X, ArrowDownRight } from 'lucide-react';
 
 interface SignatureOverlayProps {

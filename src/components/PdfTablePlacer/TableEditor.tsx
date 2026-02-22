@@ -1,6 +1,6 @@
 import React from 'react';
-import { TableData } from '../types';
-import { Plus, Trash2, GripVertical } from 'lucide-react';
+import { TableData } from '../../types';
+import { Plus, Trash2 } from 'lucide-react';
 
 interface TableEditorProps {
   data: TableData;

@@ -1,5 +1,5 @@
 {
-  "name": "PDF Table Placer",
-  "description": "A tool to visually place and insert tables into existing PDF documents directly in your browser.",
+  "name": "QA's Toolkit",
+  "description": "A collection of utilities designed to streamline your software testing and automation workflows.",
   "requestFramePermissions": []
 }

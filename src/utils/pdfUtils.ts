@@ -202,7 +202,6 @@ export const insertTableIntoPDF = async (
         if (r === 0 && !style.bold && !style.italic) finalFont = fontBold; 
 
         const textWidth = finalFont.widthOfTextAtSize(content, fontSize);
-        const textHeight = finalFont.heightAtSize(fontSize);
 
         // Horizontal Align
         let textX = cellX + cellPadding;

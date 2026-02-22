@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { TableData, CellStyle } from '../types';
+import { TableData, CellStyle } from '../../types';
 import { 
   Plus, Merge as MergeIcon, Split, Trash2, Eraser, Columns, Rows,
   Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, 
@@ -218,7 +218,7 @@ const TableOverlay: React.FC<TableOverlayProps> = ({
 
   // --- Selection Logic ---
 
-  const handleMouseDownCell = (r: number, c: number, e: React.MouseEvent) => {
+  const handleMouseDownCell = (r: number, c: number, _e: React.MouseEvent) => {
     if (resizingColIndex !== null || resizingRowIndex !== null || isResizingTable) return;
     
     setIsSelecting(true);
@@ -609,7 +609,7 @@ const TableOverlay: React.FC<TableOverlayProps> = ({
     return { top: -45, left: 0 };
   };
 
-  const getEditingToolbarStyle = (r: number, c: number) => {
+  const getEditingToolbarStyle = (_r: number, _c: number) => {
     return { bottom: '100%', left: 0, marginBottom: '8px' };
   };
   

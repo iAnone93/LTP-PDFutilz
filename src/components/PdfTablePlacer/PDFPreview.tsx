@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { getPDFDocument } from '../utils/pdfUtils';
-import { Placement, TableData, SignatureData } from '../types';
+import { getPDFDocument } from '../../utils/pdfUtils';
+import { Placement, TableData, SignatureData } from '../../types';
 import { MousePointerClick, ZoomIn, ZoomOut } from 'lucide-react';
 import TableOverlay from './TableOverlay';
 import SignatureOverlay from './SignatureOverlay';
