@@ -67,10 +67,10 @@ const LandingPage: React.FC = () => {
       <main className="max-w-7xl mx-auto px-6 py-12">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-4">
-            Essential Tools for smooth work
+            Essential Tools for Smooth Work!
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            A collection of utilities designed to streamline your software testing and automation workflows.
+            A collection of utilities designed to streamline your workflows way more smoother.
           </p>
         </div>
 
