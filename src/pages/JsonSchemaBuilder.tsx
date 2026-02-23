@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, FileJson, Upload, Play, Copy, Check, Trash2, FileCode, Wand2, AlignLeft, Edit3, X, Save, Plus } from 'lucide-react';
 import { jsonrepair } from 'jsonrepair';
@@ -9,6 +9,45 @@ interface SchemaFormNodeProps {
   onUpdate: (path: string[], value: any) => void;
   level?: number;
 }
+
+const SchemaPropertyInput: React.FC<{
+  initialValue: any;
+  onCommit: (val: any) => void;
+}> = ({ initialValue, onCommit }) => {
+  const [value, setValue] = useState(
+    typeof initialValue === 'object' ? JSON.stringify(initialValue) : String(initialValue)
+  );
+
+  useEffect(() => {
+    setValue(typeof initialValue === 'object' ? JSON.stringify(initialValue) : String(initialValue));
+  }, [initialValue]);
+
+  const handleCommit = () => {
+    let newVal: any = value;
+    try {
+      newVal = JSON.parse(value);
+    } catch (e) {
+      // Keep as string
+    }
+    onCommit(newVal);
+  };
+
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={handleCommit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          handleCommit();
+          (e.target as HTMLInputElement).blur();
+        }
+      }}
+      className="flex-1 px-2 py-1 bg-white border border-gray-200 rounded text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+    />
+  );
+};
 
 const SchemaFormNode: React.FC<SchemaFormNodeProps> = ({ path, schema, onUpdate, level = 0 }) => {
   const [isAdding, setIsAdding] = React.useState(false);
@@ -136,15 +175,9 @@ const SchemaFormNode: React.FC<SchemaFormNodeProps> = ({ path, schema, onUpdate,
           return (
             <div key={key} className="flex items-center gap-2 text-sm">
               <label className="w-24 shrink-0 text-gray-500 font-mono text-xs">{key}:</label>
-              <input 
-                type="text"
-                value={typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                onChange={(e) => {
-                  let newVal: any = e.target.value;
-                  try { newVal = JSON.parse(e.target.value); } catch(e) {}
-                  handleValueChange(key, newVal);
-                }}
-                className="flex-1 px-2 py-1 bg-white border border-gray-200 rounded text-xs focus:ring-1 focus:ring-blue-500 outline-none"
+              <SchemaPropertyInput 
+                initialValue={value}
+                onCommit={(newVal) => handleValueChange(key, newVal)}
               />
               <button onClick={() => removeKey(key)} className="text-gray-300 hover:text-red-500 transition-colors">
                 <X size={12} />
@@ -454,7 +487,23 @@ const JsonSchemaBuilder: React.FC = () => {
         target = target[path[i]];
       }
       
-      target[path[path.length - 1]] = value;
+      const key = path[path.length - 1];
+      target[key] = value;
+
+      // Auto-add properties when 'required' is updated
+      if (key === 'required' && Array.isArray(value)) {
+        if (!target.properties) {
+          target.properties = {};
+        }
+        
+        value.forEach((reqField: any) => {
+          if (typeof reqField === 'string' && !target.properties[reqField]) {
+            // Add new property with default string type
+            target.properties[reqField] = { type: 'string' };
+          }
+        });
+      }
+
       updateSchemaFromForm(newSchema);
     } catch (e) {
       console.error('Failed to update schema from form', e);
