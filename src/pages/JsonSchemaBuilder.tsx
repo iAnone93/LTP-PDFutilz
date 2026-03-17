@@ -401,11 +401,53 @@ const JsonSchemaBuilder: React.FC = () => {
     if (obj === null) return { type: 'null' };
     
     if (Array.isArray(obj)) {
-      const items = obj.length > 0 ? generateSchema(obj[0]) : {};
-      return {
-        type: 'array',
-        items
-      };
+      if (obj.length === 0) {
+        return { type: 'array', items: {} };
+      }
+
+      const allObjects = obj.every(item => item !== null && typeof item === 'object' && !Array.isArray(item));
+
+      if (allObjects) {
+        const properties: any = {};
+        const allKeys = new Set<string>();
+        obj.forEach(item => Object.keys(item).forEach(k => allKeys.add(k)));
+
+        allKeys.forEach(key => {
+          const values = obj.map(item => item[key]).filter(v => v !== undefined);
+          const baseSchema = values.length > 0 ? generateSchema(values[0]) : {};
+
+          const allPrimitives = values.every(v => typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean');
+
+          if (allPrimitives && values.length > 0) {
+            const uniqueValues = Array.from(new Set(values));
+            if (uniqueValues.length > 1) {
+              baseSchema.enum = uniqueValues;
+            }
+            if (baseSchema.type === 'integer' && values.some(v => typeof v === 'number' && !Number.isInteger(v))) {
+              baseSchema.type = 'number';
+            }
+          }
+
+          properties[key] = baseSchema;
+        });
+
+        const required = Array.from(allKeys).filter(key => obj.every(item => item[key] !== undefined));
+
+        return {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties,
+            required
+          }
+        };
+      } else {
+        const items = generateSchema(obj[0]);
+        return {
+          type: 'array',
+          items
+        };
+      }
     }
 
     const type = typeof obj;
