@@ -49,6 +49,47 @@ const SchemaPropertyInput: React.FC<{
   );
 };
 
+const KeywordSelect = ({ value, onChange, colorCls }: { value: string, onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void, colorCls: string }) => (
+  <select
+    value={value}
+    onChange={onChange}
+    className={`w-32 px-1 py-1 text-[10px] border border-gray-200 rounded focus:ring-1 ${colorCls} outline-none bg-white`}
+    title={value ? "Selected: " + value : "Select a standard JSON schema validation keyword"}
+  >
+    <option value="" disabled>Select keyword...</option>
+    <optgroup label="General">
+      <option value="description" title='A short explanation of the property. Example: "The user full name."'>description</option>
+      <option value="title" title='A short, formal name for the property. Example: "Full Name"'>title</option>
+      <option value="default" title='Default value if none is provided. Example: "user_123" or 0'>default</option>
+      <option value="examples" title='Array of example values. Example: ["john@example.com", "jane@example.com"]'>examples</option>
+      <option value="enum" title='An array of strictly accepted values. Example: ["red", "green", "blue"]'>enum</option>
+    </optgroup>
+    <optgroup label="String">
+      <option value="minLength" title='Minimum string length (integer). Example: 3'>minLength</option>
+      <option value="maxLength" title='Maximum string length (integer). Example: 255'>maxLength</option>
+      <option value="pattern" title='Regex pattern the string must match. Example: "^[a-z]+$"'>pattern</option>
+      <option value="format" title='Built-in string formats. Example: "email", "date-time", "uri", "uuid"'>format</option>
+    </optgroup>
+    <optgroup label="Number">
+      <option value="minimum" title='Minimum numeric value inclusive. Example: 0'>minimum</option>
+      <option value="maximum" title='Maximum numeric value inclusive. Example: 100'>maximum</option>
+      <option value="exclusiveMinimum" title='Number must be strictly greater than this. Example: 0'>exclusiveMinimum</option>
+      <option value="exclusiveMaximum" title='Number must be strictly less than this. Example: 100'>exclusiveMaximum</option>
+      <option value="multipleOf" title='Number must be a multiple of this value. Example: 10'>multipleOf</option>
+    </optgroup>
+    <optgroup label="Array">
+      <option value="minItems" title='Minimum number of items in array. Example: 1'>minItems</option>
+      <option value="maxItems" title='Maximum number of items in array. Example: 10'>maxItems</option>
+      <option value="uniqueItems" title='Must all items in the array be unique? Example: true'>uniqueItems</option>
+    </optgroup>
+    <optgroup label="Object">
+      <option value="minProperties" title='Minimum number of properties in object. Example: 1'>minProperties</option>
+      <option value="maxProperties" title='Maximum number of properties in object. Example: 5'>maxProperties</option>
+      <option value="additionalProperties" title='Allow properties not defined in the schema? Example: false'>additionalProperties</option>
+    </optgroup>
+  </select>
+);
+
 const SchemaFormNode: React.FC<SchemaFormNodeProps> = ({ path, schema, onUpdate, level = 0 }) => {
   const [isAdding, setIsAdding] = React.useState(false);
   const [newKey, setNewKey] = React.useState('');
@@ -136,12 +177,10 @@ const SchemaFormNode: React.FC<SchemaFormNodeProps> = ({ path, schema, onUpdate,
           </button>
         ) : (
           <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2">
-            <input 
-              autoFocus
-              placeholder="Key"
+            <KeywordSelect 
               value={newKey}
               onChange={(e) => setNewKey(e.target.value)}
-              className="w-20 px-2 py-1 text-[10px] border border-gray-200 rounded focus:ring-1 focus:ring-blue-500 outline-none"
+              colorCls="focus:ring-blue-500"
             />
             <input 
               placeholder="Value"
@@ -203,12 +242,10 @@ const SchemaFormNode: React.FC<SchemaFormNodeProps> = ({ path, schema, onUpdate,
               </button>
             ) : (
               <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2">
-                <input 
-                  autoFocus
-                  placeholder="Key"
+                <KeywordSelect 
                   value={newAllKey}
                   onChange={(e) => setNewAllKey(e.target.value)}
-                  className="w-20 px-2 py-1 text-[10px] border border-gray-200 rounded focus:ring-1 focus:ring-purple-500 outline-none"
+                  colorCls="focus:ring-purple-500"
                 />
                 <input 
                   placeholder="Value"
@@ -270,6 +307,7 @@ const JsonSchemaBuilder: React.FC = () => {
   const [editableSchema, setEditableSchema] = useState('');
   const [editMode, setEditMode] = useState<'code' | 'form'>('code');
   const [editError, setEditError] = useState<string | null>(null);
+  const [autoDetectEnums, setAutoDetectEnums] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const modalTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -418,14 +456,23 @@ const JsonSchemaBuilder: React.FC = () => {
 
           const allPrimitives = values.every(v => typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean');
 
-          if (allPrimitives && values.length > 0) {
+          if (autoDetectEnums && allPrimitives && values.length > 0) {
             const uniqueValues = Array.from(new Set(values));
-            if (uniqueValues.length > 1) {
+            // Detect enum if there's less than 15 unique values, and it's less than the total items 
+            // OR if all values are uniquely identical (e.g. they only provided 1 or 2 items and both share properties).
+            // A good heuristic for "master data" enum vs "dynamic values".
+            const isEnumRatio = uniqueValues.length < values.length || values.length <= 2;
+            
+            if (uniqueValues.length > 1 && uniqueValues.length <= 15 && isEnumRatio) {
               baseSchema.enum = uniqueValues;
             }
             if (baseSchema.type === 'integer' && values.some(v => typeof v === 'number' && !Number.isInteger(v))) {
               baseSchema.type = 'number';
             }
+          } else if (allPrimitives && values.length > 0) {
+             if (baseSchema.type === 'integer' && values.some(v => typeof v === 'number' && !Number.isInteger(v))) {
+               baseSchema.type = 'number';
+             }
           }
 
           properties[key] = baseSchema;
@@ -576,6 +623,15 @@ const JsonSchemaBuilder: React.FC = () => {
           <h1 className="text-xl font-bold text-gray-800 tracking-tight">JSON Schema Builder</h1>
         </div>
         <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer mr-2" title="Automatically extract enum values from array items">
+            <input 
+              type="checkbox" 
+              checked={autoDetectEnums}
+              onChange={(e) => setAutoDetectEnums(e.target.checked)}
+              className="rounded text-blue-600 focus:ring-blue-500 bg-gray-50 border-gray-300 w-4 h-4 cursor-pointer"
+            />
+            Auto-detect Enums
+          </label>
            <button 
             onClick={handleClear}
             disabled={!jsonInput && !schemaOutput}
