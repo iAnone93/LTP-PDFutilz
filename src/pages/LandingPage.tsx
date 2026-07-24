@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Code, FileJson, FileOutput, Wrench, ArrowRight } from 'lucide-react';
+import { FileText, Code, FileJson, FileOutput, Wrench, ArrowRight, GitCompare } from 'lucide-react';
 
 const tools = [
   {
@@ -28,6 +28,15 @@ const tools = [
     icon: <FileJson className="w-8 h-8 text-blue-500" />,
     path: '/json-schema-builder',
     color: 'bg-blue-50 border-blue-100 hover:border-blue-300',
+    available: true
+  },
+  {
+    id: 'json-compare',
+    name: 'JSON Compare',
+    description: 'Compare two JSON objects side-by-side to easily find differences.',
+    icon: <GitCompare className="w-8 h-8 text-rose-500" />,
+    path: '/json-compare',
+    color: 'bg-rose-50 border-rose-100 hover:border-rose-300',
     available: true
   },
   {
@@ -59,7 +68,7 @@ const LandingPage: React.FC = () => {
           <div className="bg-indigo-600 p-2 rounded-lg text-white">
             <Wrench size={20} />
           </div>
-          <h1 className="text-xl font-bold text-gray-800 tracking-tight">QA's Toolkit</h1>
+          <h1 className="text-xl font-bold text-gray-800 tracking-tight">ian's Toolkit</h1>
         </div>
       </header>
 

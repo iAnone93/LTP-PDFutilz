@@ -6,6 +6,7 @@ import PdfTablePlacer from './pages/PdfTablePlacer';
 import JsonFormatter from './pages/JsonFormatter';
 import JsonSchemaBuilder from './pages/JsonSchemaBuilder';
 import DocumentConverter from './pages/DocumentConverter';
+import JsonCompare from './pages/JsonCompare';
 
 const App: React.FC = () => {
   return (
@@ -16,6 +17,7 @@ const App: React.FC = () => {
         <Route path="/json-formatter" element={<JsonFormatter />} />
         <Route path="/json-schema-builder" element={<JsonSchemaBuilder />} />
         <Route path="/document-converter" element={<DocumentConverter />} />
+        <Route path="/json-compare" element={<JsonCompare />} />
       </Routes>
     </Router>
   );
