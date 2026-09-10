@@ -198,7 +198,7 @@ const PdfTablePlacer: React.FC = () => {
           <div className="bg-indigo-600 p-2 rounded-lg text-white">
             <Layout size={20} />
           </div>
-          <h1 className="text-xl font-bold text-gray-800 tracking-tight truncate">PDF Table Placer</h1>
+          <h1 className="text-xl font-bold text-gray-800 tracking-tight truncate">PDF Sign & Table Placer</h1>
         </div>
         <div className="text-sm text-gray-500 hidden sm:block">
           v1.6.1

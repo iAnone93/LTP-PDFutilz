@@ -5,7 +5,7 @@ import { FileText, Code, FileJson, FileOutput, Wrench, ArrowRight, GitCompare } 
 const tools = [
   {
     id: 'pdf-table-placer',
-    name: 'PDF Table Placer',
+    name: 'PDF Sign & Table Placer',
     description: 'Visually place and insert tables or signatures into existing PDF documents.',
     icon: <FileText className="w-8 h-8 text-indigo-500" />,
     path: '/pdf-table-placer',
