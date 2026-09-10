@@ -10,7 +10,7 @@ import JsonCompare from './pages/JsonCompare';
 
 const App: React.FC = () => {
   return (
-    <Router>
+    <Router basename={import.meta.env.BASE_URL}>
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/pdf-table-placer" element={<PdfTablePlacer />} />
