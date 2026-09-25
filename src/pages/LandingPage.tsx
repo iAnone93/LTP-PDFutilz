@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Code, FileJson, FileOutput, Wrench, ArrowRight, GitCompare } from 'lucide-react';
+import { FileText, Code, FileJson, FileOutput, Wrench, ArrowRight, GitCompare, Layers } from 'lucide-react';
 
 const tools = [
   {
@@ -10,6 +10,15 @@ const tools = [
     icon: <FileText className="w-8 h-8 text-indigo-500" />,
     path: '/pdf-table-placer',
     color: 'bg-indigo-50 border-indigo-100 hover:border-indigo-300',
+    available: true
+  },
+  {
+    id: 'pdf-merge',
+    name: 'PDF Merge',
+    description: 'Combine multiple PDF files into one. Arrange custom first, last, and overall page sequence.',
+    icon: <Layers className="w-8 h-8 text-purple-600" />,
+    path: '/pdf-merge',
+    color: 'bg-purple-50 border-purple-100 hover:border-purple-300',
     available: true
   },
   {
@@ -69,6 +78,11 @@ const LandingPage: React.FC = () => {
             <Wrench size={20} />
           </div>
           <h1 className="text-xl font-bold text-gray-800 tracking-tight">ian's Toolkit</h1>
+        </div>
+        <div className="flex items-center space-x-3">
+          <span className="text-xs font-semibold px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full border border-gray-200">
+            v1.8.0
+          </span>
         </div>
       </header>
 

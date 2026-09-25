@@ -7,13 +7,16 @@ import JsonFormatter from './pages/JsonFormatter';
 import JsonSchemaBuilder from './pages/JsonSchemaBuilder';
 import DocumentConverter from './pages/DocumentConverter';
 import JsonCompare from './pages/JsonCompare';
+import PdfMerge from './pages/PdfMerge';
 
 const App: React.FC = () => {
+  const baseUrl = (import.meta as any).env?.BASE_URL || '/';
   return (
-    <Router basename={import.meta.env.BASE_URL}>
+    <Router basename={baseUrl}>
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/pdf-table-placer" element={<PdfTablePlacer />} />
+        <Route path="/pdf-merge" element={<PdfMerge />} />
         <Route path="/json-formatter" element={<JsonFormatter />} />
         <Route path="/json-schema-builder" element={<JsonSchemaBuilder />} />
         <Route path="/document-converter" element={<DocumentConverter />} />
